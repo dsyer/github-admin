@@ -18,7 +18,6 @@ package com.example;
 
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.util.Map;
 
 import org.cloudfoundry.client.lib.CloudCredentials;
 import org.cloudfoundry.client.lib.CloudFoundryClient;
@@ -29,8 +28,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.common.OAuth2AccessToken;
 
 /**
@@ -44,17 +41,12 @@ public class CloudFoundryClientConfiguration {
 	private CloudFoundryDiscoveryProperties discovery;
 
 	@Bean
-	@Scope(value="session", proxyMode=ScopedProxyMode.TARGET_CLASS)
-	@Lazy
-	public CloudCredentials cloudCredentials() {
-		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-		@SuppressWarnings("unchecked")
-		Map<String,Object> user = (Map<String,Object>) authentication.getDetails();
-		return new CloudCredentials((OAuth2AccessToken) user.get("token"));
+	public MutableCloudCredentials cloudCredentials() {
+		return new MutableCloudCredentials();
 	}
 
 	@Bean
-	@Scope(value="session", proxyMode=ScopedProxyMode.TARGET_CLASS)
+	@Scope(proxyMode=ScopedProxyMode.TARGET_CLASS)
 	@Lazy
 	public CloudFoundryClient cloudFoundryClient(CloudCredentials credentials)
 			throws MalformedURLException {
@@ -71,4 +63,21 @@ public class CloudFoundryClientConfiguration {
 		return cloudFoundryClient;
 	}
 
+}
+
+class MutableCloudCredentials extends CloudCredentials {
+	private OAuth2AccessToken token;
+	public MutableCloudCredentials() {
+		super("","");
+	}
+	@Override
+	public OAuth2AccessToken getToken() {
+		return this.token;
+	}
+	public void setToken(OAuth2AccessToken token) {
+		this.token = token;
+	}
+	public boolean isAuthenticated() {
+		return this.token!=null;
+	}
 }

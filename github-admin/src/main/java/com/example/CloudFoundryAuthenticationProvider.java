@@ -18,8 +18,6 @@ package com.example;
 
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.util.HashMap;
-import java.util.Map;
 
 import org.cloudfoundry.client.lib.CloudCredentials;
 import org.cloudfoundry.client.lib.CloudFoundryClient;
@@ -42,10 +40,12 @@ import org.springframework.stereotype.Service;
 public class CloudFoundryAuthenticationProvider implements AuthenticationProvider {
 
 	private CloudFoundryDiscoveryProperties discovery;
+	private MutableCloudCredentials cloudCredentials;
 
 	@Autowired
-	public CloudFoundryAuthenticationProvider(CloudFoundryDiscoveryProperties discovery) {
+	public CloudFoundryAuthenticationProvider(CloudFoundryDiscoveryProperties discovery, MutableCloudCredentials cloudCredentials) {
 		this.discovery = discovery;
+		this.cloudCredentials = cloudCredentials;
 	}
 
 	@Override
@@ -60,23 +60,15 @@ public class CloudFoundryAuthenticationProvider implements AuthenticationProvide
 		String username = token.getName();
 		String password = token.getCredentials().toString();
 		try {
-			OAuth2AccessToken access = cloudFoundryClient(cloudCredentials(username, password)).login();
+			OAuth2AccessToken access = cloudFoundryClient(new CloudCredentials(username, password)).login();
 			UsernamePasswordAuthenticationToken result = new UsernamePasswordAuthenticationToken(username, password,
 					AuthorityUtils.commaSeparatedStringToAuthorityList("ROLE_USER"));
-			Map<String,Object> map = new HashMap<>();
-			map.put("username", username);
-			map.put("password", password);
-			map.put("token", access);
-			result.setDetails(map);
+			this.cloudCredentials.setToken(access);
 			return result;
 		}
 		catch (Exception e) {
 			throw new BadCredentialsException("Cannot authenticate");
 		}
-	}
-
-	private CloudCredentials cloudCredentials(String username, String password) {
-		return new CloudCredentials(username, password);
 	}
 
 	private CloudFoundryClient cloudFoundryClient(CloudCredentials cc)
