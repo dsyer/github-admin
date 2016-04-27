@@ -1,6 +1,5 @@
 package com.example;
 
-import java.util.List;
 import java.util.Map;
 
 import org.cloudfoundry.operations.CloudFoundryOperations;
@@ -12,8 +11,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.context.request.async.DeferredResult;
 
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @SpringBootApplication
 @EnableConfigurationProperties(ApplicationProperties.class)
@@ -30,15 +31,16 @@ public class DeployerApplication {
 	private AppDeployer appDeployer;
 
 	@RequestMapping("/")
-	public String home(Map<String, Object> model) {
+	public DeferredResult<String> home(Map<String, Object> model) {
+		DeferredResult<String> result = new DeferredResult<>();
 		Flux<ApplicationSummary> response = this.client.applications().list();
-		List<Application> list = response
-				.map(summary -> new Application(summary.getName(), summary.getInstances(),
-						summary.getRunningInstances(),
-						this.application.getResources().get(summary.getName())))
-				.toList().get();
-		model.put("apps", list);
-		return "index";
+		response.map(summary -> new Application(summary.getName(), summary.getInstances(),
+				summary.getRunningInstances(),
+				this.application.getResources().get(summary.getName()))).toList()
+				.otherwise(e -> Mono.empty())
+				.consume(list -> model.put("apps", list), null,
+						() -> result.setResult("index"));
+		return result;
 	}
 
 	public static void main(String[] args) {

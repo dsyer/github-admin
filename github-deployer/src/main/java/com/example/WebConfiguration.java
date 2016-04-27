@@ -1,20 +1,34 @@
 package com.example;
 
-import java.util.Map;
-
-import javax.servlet.http.HttpServletRequest;
-
-import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
 public class WebConfiguration {
 
-	@RequestMapping("/login")
-	public String login(HttpServletRequest request, Map<String, Object> model) {
-		// Could be a view controller in Spring Boot 1.4
-		model.put("_csrf", ((CsrfToken)request.getAttribute("_csrf")).getToken());
+	private CloudFoundryAuthenticator authenticator;
+
+	public WebConfiguration(CloudFoundryAuthenticator authenticator) {
+		this.authenticator = authenticator;
+	}
+
+	@GetMapping("/login")
+	public String login() {
+		return "login";
+	}
+
+	@PostMapping("/login")
+	public String authenticate(@RequestParam String username, @RequestParam String password) {
+		this.authenticator.authenticate(username, password);
+		return "index";
+	}
+
+	@ExceptionHandler(BadCredentialsException.class)
+	public String error() {
 		return "login";
 	}
 
