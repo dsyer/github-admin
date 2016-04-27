@@ -1,6 +1,8 @@
 package com.example;
 
+import java.util.Collections;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 import org.cloudfoundry.operations.CloudFoundryOperations;
 import org.cloudfoundry.operations.applications.ApplicationSummary;
@@ -31,16 +33,16 @@ public class DeployerApplication {
 	private AppDeployer appDeployer;
 
 	@RequestMapping("/")
-	public DeferredResult<String> home(Map<String, Object> model) {
-		DeferredResult<String> result = new DeferredResult<>();
+	public CompletableFuture<String> home(Map<String, Object> model) {
 		Flux<ApplicationSummary> response = this.client.applications().list();
-		response.map(summary -> new Application(summary.getName(), summary.getInstances(),
-				summary.getRunningInstances(),
-				this.application.getResources().get(summary.getName()))).toList()
-				.otherwise(e -> Mono.empty())
-				.consume(list -> model.put("apps", list), null,
-						() -> result.setResult("index"));
-		return result;
+		return response
+				.map(summary -> //
+					new Application(summary.getName(), summary.getInstances(),
+						summary.getRunningInstances(), this.application.getResources().get(summary.getName())))
+					.toList()//
+				.otherwise(e -> Mono.just(Collections.emptyList()))//
+				.doOnSuccess(list -> model.put("apps", list)).map(list -> "index")//
+				.toCompletableFuture();
 	}
 
 	public static void main(String[] args) {
@@ -54,8 +56,7 @@ class Application {
 	Integer runningInstances;
 	String resource;
 
-	public Application(String name, Integer instances, Integer runningInstances,
-			String resource) {
+	public Application(String name, Integer instances, Integer runningInstances, String resource) {
 		super();
 		this.name = name;
 		this.instances = instances;
