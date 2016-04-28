@@ -24,7 +24,7 @@ public class WebConfiguration {
 	@PostMapping("/login")
 	public String authenticate(@RequestParam String username, @RequestParam String password) {
 		this.authenticator.authenticate(username, password);
-		return "index";
+		return "redirect:/";
 	}
 
 	@ExceptionHandler(BadCredentialsException.class)

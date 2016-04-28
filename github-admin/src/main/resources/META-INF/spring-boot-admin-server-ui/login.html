@@ -37,7 +37,8 @@
 			<div class="container-fluid content">
 				<div class="alert alert-danger" ng-show="controller.error">There
 					was a problem logging in. Please try again.</div>
-				<form role="form" ng-submit="controller.login()">
+				<div class="alert alert-info" ng-show="controller.authenticated">Refreshing applications. Please wait...</div>
+				<form role="form" ng-submit="controller.login()" ng-show="!controller.authenticated">
 					<div class="form-group">
 						<label for="username">Username:</label> <input type="text"
 							class="form-control" id="username" name="username"
@@ -71,23 +72,26 @@
 							var self = this;
 							self.credentials = {};
 							self.error = false;
+							self.authenticated = false;
 							self.login = function() {
 								$http(
 										{
 											method : 'POST',
-											url : "/login",
+											url : "/auth",
 											data : jQuery
 													.param(self.credentials),
 											headers : {
 												'Content-Type' : 'application/x-www-form-urlencoded'
 											}
 										}).then(function() {
+									self.authenticated = true;
+									self.error = false;
 									$http.get("/update").then(function() {
 										$window.location = "/";
 									});
-									self.error = false;
 								}, function() {
 									self.error = true;
+									self.authenticated = false;
 								})
 							};
 						});

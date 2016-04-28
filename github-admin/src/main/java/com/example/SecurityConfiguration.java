@@ -12,9 +12,12 @@ import javax.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.authority.AuthorityUtils;
+import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
+import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
@@ -26,27 +29,50 @@ import org.springframework.web.util.WebUtils;
 public class SecurityConfiguration extends WebSecurityConfigurerAdapter {
 
 	@Autowired
-	private CloudFoundryAuthenticationProvider authenticationProvider;
-
-	@Override
-	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
-		auth.authenticationProvider(this.authenticationProvider);
-	}
+	private MutableCloudCredentials cloudCredentials;
 
 	@Override
 	public void configure(HttpSecurity http) throws Exception {
 		http//
-				.formLogin().loginPage("/login").permitAll()
-				.failureHandler((request, response, exception) -> {
-					response.sendError(401, "Bad credentials");
-				}).and()//
-				.authorizeRequests().antMatchers(HttpMethod.POST, "/api/applications")
-				.permitAll()//
-				.antMatchers("/img/**", "/mgmt/health").permitAll()//
+				.exceptionHandling()
+				.authenticationEntryPoint(new LoginUrlAuthenticationEntryPoint("/auth"))//
+				.and().authorizeRequests()//
+				.antMatchers(HttpMethod.POST, "/api/applications").permitAll()//
+				.antMatchers("/img/**", "/mgmt/health", "/auth", "/login*").permitAll()//
 				.anyRequest().authenticated()//
 				.and().csrf().ignoringAntMatchers("/api/**", "/mgmt/**")
 				.csrfTokenRepository(csrfTokenRepository()).and()
+				.addFilterBefore(authFilter(),
+						AbstractPreAuthenticatedProcessingFilter.class)
 				.addFilterAfter(csrfHeaderFilter(), CsrfFilter.class);
+	}
+
+	private Filter authFilter() {
+
+		AbstractPreAuthenticatedProcessingFilter filter = new AbstractPreAuthenticatedProcessingFilter() {
+
+			@Override
+			protected Object getPreAuthenticatedPrincipal(HttpServletRequest request) {
+				return "user";
+			}
+
+			@Override
+			protected Object getPreAuthenticatedCredentials(HttpServletRequest request) {
+				return "N/A";
+			}
+		};
+
+		filter.setAuthenticationManager(authentication -> {
+			if (this.cloudCredentials.getToken() != null) {
+				return new PreAuthenticatedAuthenticationToken("user", "N/A",
+						AuthorityUtils.commaSeparatedStringToAuthorityList("ROLE_USER"));
+			}
+			return null;
+		});
+
+		filter.afterPropertiesSet();
+		return filter;
+
 	}
 
 	private Filter csrfHeaderFilter() {

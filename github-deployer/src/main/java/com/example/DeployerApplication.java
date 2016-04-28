@@ -11,14 +11,14 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.deployer.spi.app.AppDeployer;
+import org.springframework.cloud.deployer.spi.cloudfoundry.CloudFoundryDeployerAutoConfiguration;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.context.request.async.DeferredResult;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-@SpringBootApplication
+@SpringBootApplication(exclude=CloudFoundryDeployerAutoConfiguration.class)
 @EnableConfigurationProperties(ApplicationProperties.class)
 @Controller
 public class DeployerApplication {
@@ -35,13 +35,13 @@ public class DeployerApplication {
 	@RequestMapping("/")
 	public CompletableFuture<String> home(Map<String, Object> model) {
 		Flux<ApplicationSummary> response = this.client.applications().list();
-		return response
-				.map(summary -> //
-					new Application(summary.getName(), summary.getInstances(),
-						summary.getRunningInstances(), this.application.getResources().get(summary.getName())))
-					.toList()//
+		return response.map(summary -> //
+		new Application(summary.getName(), summary.getInstances(),
+				summary.getRunningInstances(),
+				this.application.getResources().get(summary.getName()))).toList()//
 				.otherwise(e -> Mono.just(Collections.emptyList()))//
-				.doOnSuccess(list -> model.put("apps", list)).map(list -> "index")//
+				.doOnSuccess(list -> model.put("apps", list))//
+				.map(list -> "index")//
 				.toCompletableFuture();
 	}
 
@@ -56,7 +56,8 @@ class Application {
 	Integer runningInstances;
 	String resource;
 
-	public Application(String name, Integer instances, Integer runningInstances, String resource) {
+	public Application(String name, Integer instances, Integer runningInstances,
+			String resource) {
 		super();
 		this.name = name;
 		this.instances = instances;

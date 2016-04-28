@@ -23,12 +23,8 @@ import org.cloudfoundry.client.lib.CloudCredentials;
 import org.cloudfoundry.client.lib.CloudFoundryClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.cloudfoundry.discovery.CloudFoundryDiscoveryProperties;
-import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.oauth2.common.OAuth2AccessToken;
 import org.springframework.stereotype.Service;
 
@@ -37,34 +33,22 @@ import org.springframework.stereotype.Service;
  *
  */
 @Service
-public class CloudFoundryAuthenticationProvider implements AuthenticationProvider {
+public class CloudFoundryAuthenticator {
 
 	private CloudFoundryDiscoveryProperties discovery;
 	private MutableCloudCredentials cloudCredentials;
 
 	@Autowired
-	public CloudFoundryAuthenticationProvider(CloudFoundryDiscoveryProperties discovery, MutableCloudCredentials cloudCredentials) {
+	public CloudFoundryAuthenticator(CloudFoundryDiscoveryProperties discovery, MutableCloudCredentials cloudCredentials) {
 		this.discovery = discovery;
 		this.cloudCredentials = cloudCredentials;
 	}
 
-	@Override
-	public boolean supports(Class<?> authentication) {
-		return UsernamePasswordAuthenticationToken.class.isAssignableFrom(authentication);
-	}
-
-	@Override
-	public Authentication authenticate(Authentication authentication)
+	public void authenticate(String username, String password)
 			throws AuthenticationException {
-		UsernamePasswordAuthenticationToken token = (UsernamePasswordAuthenticationToken) authentication;
-		String username = token.getName();
-		String password = token.getCredentials().toString();
 		try {
 			OAuth2AccessToken access = cloudFoundryClient(new CloudCredentials(username, password)).login();
-			UsernamePasswordAuthenticationToken result = new UsernamePasswordAuthenticationToken(username, password,
-					AuthorityUtils.commaSeparatedStringToAuthorityList("ROLE_USER"));
 			this.cloudCredentials.setToken(access);
-			return result;
 		}
 		catch (Exception e) {
 			throw new BadCredentialsException("Cannot authenticate");

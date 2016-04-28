@@ -21,6 +21,7 @@ import java.net.MalformedURLException;
 import org.cloudfoundry.client.CloudFoundryClient;
 import org.cloudfoundry.spring.client.SpringCloudFoundryClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.context.refresh.ContextRefresher;
 import org.springframework.cloud.deployer.spi.cloudfoundry.CloudFoundryDeployerProperties;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
@@ -36,11 +37,13 @@ public class CloudFoundryAuthenticator {
 
 	private CloudFoundryDeployerProperties properties;
 	private SpringCloudFoundryClient cloudFoundryClient;
+	private ContextRefresher refresher;
 
 	@Autowired
 	public CloudFoundryAuthenticator(CloudFoundryDeployerProperties discovery,
-			CloudFoundryClient cloudFoundryClient) {
+			CloudFoundryClient cloudFoundryClient, ContextRefresher refresher) {
 		this.properties = discovery;
+		this.refresher = refresher;
 		this.cloudFoundryClient = (SpringCloudFoundryClient) cloudFoundryClient;
 	}
 
@@ -50,6 +53,7 @@ public class CloudFoundryAuthenticator {
 			String access = cloudFoundryClient(username, password).getAccessToken().get();
 			this.cloudFoundryClient.getConnectionContext().getClientContext()
 					.setAccessToken(new DefaultOAuth2AccessToken(access));
+			this.refresher.refresh();
 		}
 		catch (Exception e) {
 			throw new BadCredentialsException("Cannot authenticate");
