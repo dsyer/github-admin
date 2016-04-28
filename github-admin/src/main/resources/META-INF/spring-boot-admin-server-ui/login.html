@@ -37,8 +37,10 @@
 			<div class="container-fluid content">
 				<div class="alert alert-danger" ng-show="controller.error">There
 					was a problem logging in. Please try again.</div>
-				<div class="alert alert-info" ng-show="controller.authenticated">Refreshing applications. Please wait...</div>
-				<form role="form" ng-submit="controller.login()" ng-show="!controller.authenticated">
+				<div class="alert alert-info" ng-show="controller.authenticated">Refreshing
+					applications. Please wait...</div>
+				<form role="form" ng-submit="controller.login()"
+					ng-show="!controller.authenticated">
 					<div class="form-group">
 						<label for="username">Username:</label> <input type="text"
 							class="form-control" id="username" name="username"
@@ -64,37 +66,25 @@
 
 	<script src="js/app.js" type="text/javascript"></script>
 	<script type="text/javascript">
-		angular
-				.module("springBootAdmin")
-				.controller(
-						"login",
-						function($http, $window) {
-							var self = this;
-							self.credentials = {};
+		angular.module("springBootAdmin").controller("login",
+				function($http, $window) {
+					var self = this;
+					self.credentials = {};
+					self.error = false;
+					self.authenticated = false;
+					self.login = function() {
+						$http.post("/auth", self.credentials).then(function() {
+							self.authenticated = true;
 							self.error = false;
+							$http.get("/update").then(function() {
+								$window.location = "/";
+							});
+						}, function() {
+							self.error = true;
 							self.authenticated = false;
-							self.login = function() {
-								$http(
-										{
-											method : 'POST',
-											url : "/auth",
-											data : jQuery
-													.param(self.credentials),
-											headers : {
-												'Content-Type' : 'application/x-www-form-urlencoded'
-											}
-										}).then(function() {
-									self.authenticated = true;
-									self.error = false;
-									$http.get("/update").then(function() {
-										$window.location = "/";
-									});
-								}, function() {
-									self.error = true;
-									self.authenticated = false;
-								})
-							};
-						});
+						})
+					};
+				});
 	</script>
 </body>
 </html>
