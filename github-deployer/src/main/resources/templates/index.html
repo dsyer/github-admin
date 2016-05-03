@@ -31,8 +31,7 @@
 					<td>{{name}}</td>
 					<td>{{runningInstances}}/{{instances}}</td> {{#resource}}
 					<td>{{.}}</td>
-					<td><form action="/" method="post">
-							<input type="hidden" name="name" value="{{name}}" />
+					<td><form action="/apps/{{name}}" method="post">
 							<button type="submit" class="btn btn-primary">Redeploy</button>
 						</form></td> {{/resource}} {{^resource}}
 					<td></td>

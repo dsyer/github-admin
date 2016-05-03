@@ -10,12 +10,12 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
-public class WebConfiguration {
+public class AuthController {
 
 	private CloudFoundryAuthenticator authenticator;
 
 	@Autowired
-	public WebConfiguration(CloudFoundryAuthenticator authenticator) {
+	public AuthController(CloudFoundryAuthenticator authenticator) {
 		this.authenticator = authenticator;
 	}
 

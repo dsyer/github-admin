@@ -8,11 +8,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 @Controller
-public class WebConfiguration {
+public class AuthController {
 
 	private CloudFoundryAuthenticator authenticator;
 
-	public WebConfiguration(CloudFoundryAuthenticator authenticator) {
+	public AuthController(CloudFoundryAuthenticator authenticator) {
 		this.authenticator = authenticator;
 	}
 
