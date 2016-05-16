@@ -41,8 +41,7 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(CloudFoundryDeployerProperties.class)
 public class CloudFoundryDeployerConfiguration {
 
-	@Bean
-	public CloudFoundryClient cloudFoundryClient(CloudFoundryDeployerProperties properties) {
+	private CloudFoundryClient cloudFoundryClient(CloudFoundryDeployerProperties properties) {
 		URL apiEndpoint = properties.getApiEndpoint();
 
 		return SpringCloudFoundryClient.builder()
@@ -56,9 +55,9 @@ public class CloudFoundryDeployerConfiguration {
 
 	@Bean
 	@RefreshScope
-	CloudFoundryOperations cloudFoundryOperations(CloudFoundryDeployerProperties properties, CloudFoundryClient cloudFoundryClient) {
+	CloudFoundryOperations cloudFoundryOperations(CloudFoundryDeployerProperties properties) {
 		return new CloudFoundryOperationsBuilder()
-				.cloudFoundryClient(cloudFoundryClient)
+				.cloudFoundryClient(cloudFoundryClient(properties))
 				.target(properties.getOrganization(), properties.getSpace())
 				.build();
 	}
@@ -72,7 +71,8 @@ public class CloudFoundryDeployerConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean(TaskLauncher.class)
-	public TaskLauncher taskLauncher(CloudFoundryClient client) {
-		return new CloudFoundryTaskLauncher(client);
+	@RefreshScope
+	public TaskLauncher taskLauncher(CloudFoundryDeployerProperties properties) {
+		return new CloudFoundryTaskLauncher(cloudFoundryClient(properties));
 	}
 }

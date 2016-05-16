@@ -18,14 +18,12 @@ package com.example;
 
 import java.net.MalformedURLException;
 
-import org.cloudfoundry.client.CloudFoundryClient;
 import org.cloudfoundry.spring.client.SpringCloudFoundryClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.context.refresh.ContextRefresher;
 import org.springframework.cloud.deployer.spi.cloudfoundry.CloudFoundryDeployerProperties;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.oauth2.common.DefaultOAuth2AccessToken;
 import org.springframework.stereotype.Service;
 
 /**
@@ -36,24 +34,21 @@ import org.springframework.stereotype.Service;
 public class CloudFoundryAuthenticator {
 
 	private CloudFoundryDeployerProperties properties;
-	private SpringCloudFoundryClient cloudFoundryClient;
 	private ContextRefresher refresher;
 
 	@Autowired
-	public CloudFoundryAuthenticator(CloudFoundryDeployerProperties discovery,
-			CloudFoundryClient cloudFoundryClient, ContextRefresher refresher) {
-		this.properties = discovery;
+	public CloudFoundryAuthenticator(CloudFoundryDeployerProperties properties, ContextRefresher refresher) {
+		this.properties = properties;
 		this.refresher = refresher;
-		this.cloudFoundryClient = (SpringCloudFoundryClient) cloudFoundryClient;
 	}
 
 	public void authenticate(String username, String password)
 			throws AuthenticationException {
 		try {
-			String access = cloudFoundryClient(username, password).getAccessToken().get();
-			this.cloudFoundryClient.getConnectionContext().getClientContext()
-					.setAccessToken(new DefaultOAuth2AccessToken(access));
+			cloudFoundryClient(username, password).getAccessToken().get();
 			this.refresher.refresh();
+			this.properties.setUsername(username);
+			this.properties.setPassword(password);
 		}
 		catch (Exception e) {
 			throw new BadCredentialsException("Cannot authenticate");

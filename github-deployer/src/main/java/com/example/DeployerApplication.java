@@ -1,5 +1,6 @@
 package com.example;
 
+import java.io.IOException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.concurrent.ExecutorService;
 
 import org.cloudfoundry.operations.CloudFoundryOperations;
 import org.cloudfoundry.operations.applications.ApplicationSummary;
+import org.cloudfoundry.operations.applications.PushApplicationRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,6 +83,21 @@ public class DeployerApplication {
 				.toCompletableFuture();
 	}
 
+	public CompletableFuture<String> update(@PathVariable String name) {
+		String appId = PREFIX + "-" + name;
+		String resource = this.application.getResources().get(name);
+		Resource artifact = this.delegatingResourceLoader.getResource(resource);
+		try {
+			return this.client.applications()
+					.push(PushApplicationRequest.builder().name(appId)
+							.application(artifact.getInputStream()).build())
+					.map(empty -> "redirect:/").toCompletableFuture();
+		}
+		catch (IOException e) {
+			throw new IllegalStateException("Cannot update app", e);
+		}
+	}
+
 	@PostMapping("/apps/{name}")
 	public String push(@PathVariable String name) {
 		log.info("Handling app deploy: " + name);
@@ -97,8 +114,8 @@ public class DeployerApplication {
 				// Not deployed
 			}
 			int count = 0;
-			while (this.appDeployer.status(appId).getState() != DeploymentState.undeployed
-					&& count++ <= 100) {
+			DeploymentState state = this.appDeployer.status(appId).getState();
+			while (state == DeploymentState.deployed && count++ <= 100) {
 				try {
 					Thread.sleep(500L);
 				}
@@ -106,7 +123,7 @@ public class DeployerApplication {
 					Thread.currentThread().interrupt();
 					break;
 				}
-				log.info("Polling app: " + appId + "(" + count + ")");
+				log.info("Polling app: " + appId + ", " + state + " (" + count + ")");
 			}
 			if (count <= 100) {
 				log.info("Deploying app: " + appId);
