@@ -1,0 +1,29 @@
+server:
+  port: 8083
+security:
+  oauth2:
+    client:
+      client-id: ${CLIENT_ID:cf}
+      client-secret: ${CLIENT_SECRET:}
+      user-authorization-uri: https://cflogin.cfapps.io/oauth/authorize
+      access-token-uri: https://cflogin.cfapps.io/oauth/token
+    resource:
+      user-info-uri: https://cflogin.cfapps.io/userinfo
+spring:
+  application:
+    name: github-admin
+  cloud:
+    cloudfoundry:
+      discovery:
+        url: https://api.run.pivotal.io
+logging:
+  level:
+    #org.springframework.security: debug
+    org.springframework.cloud.cloudfoundry.discovery: 'off'
+
+---
+spring:
+  profiles: default
+
+server:
+  context-path: /admin

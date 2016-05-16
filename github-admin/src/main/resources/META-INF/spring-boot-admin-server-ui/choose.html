@@ -33,23 +33,25 @@
 				</div>
 			</div>
 		</header>
-		<div class="main-body--wrapper" ng-controller="login as controller">
+		<div class="main-body--wrapper" ng-controller="spaces as controller">
 			<div class="container-fluid content">
 				<div class="alert alert-danger" ng-show="controller.error">There
 					was a problem logging in. Please try again.</div>
-				<div class="alert alert-info" ng-show="controller.authenticated">Refreshing
-					applications. Please wait...</div>
-				<form role="form" ng-submit="controller.login()"
+				<form role="form" ng-submit="controller.choose()"
 					ng-show="!controller.authenticated">
 					<div class="form-group">
-						<label for="username">Username:</label> <input type="text"
-							class="form-control" id="username" name="username"
-							ng-model="controller.credentials.username" />
+						<label for="username">Org:</label> <select class="form-control"
+							id="org" name="org" ng-model="controller.coordinates.org">
+							<option ng-repeat="option in controller.data.orgs"
+								value="{{option.id}}">{{option.name}}</option>
+						</select>
 					</div>
 					<div class="form-group">
-						<label for="password">Password:</label> <input type="password"
-							class="form-control" id="password" name="password"
-							ng-model="controller.credentials.password" />
+						<label for="username">Space:</label> <select class="form-control"
+							id="space" name="space" ng-model="controller.coordinates.space">
+							<option ng-repeat="option in controller.data.spaces[controller.coordinates.org]"
+								value="{{option.id}}">{{option.name}}</option>
+						</select>
 					</div>
 					<button type="submit" class="btn btn-primary">Submit</button>
 				</form>
@@ -66,24 +68,40 @@
 
 	<script src="js/app.js" type="text/javascript"></script>
 	<script type="text/javascript">
-		angular.module("springBootAdmin").controller("login",
+		angular.module("springBootAdmin").controller(
+				"spaces",
 				function($http, $window) {
 					var self = this;
-					self.credentials = {};
+					self.coordinates = {};
+					self.data = {orgs:{},spaces:{}};
 					self.error = false;
 					self.authenticated = false;
-					self.login = function() {
-						$http.post("/auth", self.credentials).then(function() {
-							self.authenticated = true;
-							self.error = false;
-							$http.get("/update").then(function() {
-								$window.location = "/";
-							});
-						}, function() {
-							self.error = true;
-							self.authenticated = false;
-						})
+					self.choose = function() {
+						var names = {org:self.data.orgs[self.coordinates.org].name, space:self.data.spaces[self.coordinates.org][self.coordinates.space].name}
+						$http.post("spaces", names).then(
+								function() {
+									self.authenticated = true;
+									self.error = false;
+									$http.get("update").then(function() {
+										$window.location = "";
+									});
+								}, function() {
+									self.error = true;
+									self.authenticated = false;
+								})
 					};
+					$http.get("spaces").then(function(response) {
+						var data = response.data;
+						var length = data.length;
+						for (var i = 0; i < length; i++) {
+							var space = data[i];
+							self.data.orgs[space.organization.meta.guid] = {id:space.organization.meta.guid, name:space.organization.name};
+							if (!self.data.spaces[space.organization.meta.guid]) {
+								self.data.spaces[space.organization.meta.guid] = {};
+							}
+							self.data.spaces[space.organization.meta.guid][space.meta.guid] = {id:space.meta.guid, name:space.name};
+						}
+					});
 				});
 	</script>
 </body>

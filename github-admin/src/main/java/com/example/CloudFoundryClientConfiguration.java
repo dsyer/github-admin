@@ -21,6 +21,8 @@ import java.net.URI;
 
 import org.cloudfoundry.client.lib.CloudCredentials;
 import org.cloudfoundry.client.lib.CloudFoundryClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.cloudfoundry.discovery.CloudFoundryDiscoveryProperties;
 import org.springframework.context.annotation.Bean;
@@ -28,7 +30,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
-import org.springframework.security.oauth2.common.OAuth2AccessToken;
+import org.springframework.security.oauth2.client.OAuth2ClientContext;
 
 /**
  * @author Dave Syer
@@ -37,20 +39,21 @@ import org.springframework.security.oauth2.common.OAuth2AccessToken;
 @Configuration
 public class CloudFoundryClientConfiguration {
 
+	private static Logger logger = LoggerFactory
+			.getLogger(CloudFoundryClientConfiguration.class);
+
 	@Autowired
 	private CloudFoundryDiscoveryProperties discovery;
 
 	@Bean
-	public MutableCloudCredentials cloudCredentials() {
-		return new MutableCloudCredentials();
-	}
-
-	@Bean
-	@Scope(proxyMode=ScopedProxyMode.TARGET_CLASS)
+	@Scope(value = "session", proxyMode = ScopedProxyMode.TARGET_CLASS)
 	@Lazy
-	public CloudFoundryClient cloudFoundryClient(CloudCredentials credentials)
+	public CloudFoundryClient cloudFoundryClient(OAuth2ClientContext context)
 			throws MalformedURLException {
 		CloudFoundryClient cloudFoundryClient;
+		CloudCredentials credentials = new CloudCredentials(context.getAccessToken());
+		logger.info("Discovery set up for: " + discovery.getUrl() + " ["
+				+ discovery.getOrg() + "," + discovery.getSpace() + "]");
 		if (this.discovery.getOrg() != null && this.discovery.getSpace() != null) {
 			cloudFoundryClient = new CloudFoundryClient(credentials,
 					URI.create(this.discovery.getUrl()).toURL(), this.discovery.getOrg(),
@@ -63,21 +66,4 @@ public class CloudFoundryClientConfiguration {
 		return cloudFoundryClient;
 	}
 
-}
-
-class MutableCloudCredentials extends CloudCredentials {
-	private OAuth2AccessToken token;
-	public MutableCloudCredentials() {
-		super("","");
-	}
-	@Override
-	public OAuth2AccessToken getToken() {
-		return this.token;
-	}
-	public void setToken(OAuth2AccessToken token) {
-		this.token = token;
-	}
-	public boolean isAuthenticated() {
-		return this.token!=null;
-	}
 }
